@@ -55,6 +55,7 @@ enum ImportStyle {
   COMMONJS = 1,    // const grpcWeb = require("grpc-web")
   TYPESCRIPT = 2,  // import * as grpcWeb from 'grpc-web'
   WEAPP = 3,  // for wechat miniprogram
+  MINIPROGRAM = 4, // for miniprogram
 };
 
 string GetModeVar(const Mode mode) {
@@ -1028,6 +1029,8 @@ class GrpcCodeGenerator : public CodeGenerator {
           UppercaseFirstLetter(StripProto(file->name())) + "ServiceClientPb.ts";
     } else if (import_style_str == "weapp") {
       import_style = ImportStyle::WEAPP;
+    } else if (import_style_str == "miniprogram") {
+      import_style = ImportStyle::MINIPROGRAM;
     } else {
       *error = "options: invalid import_style - " + import_style_str;
       return false;
@@ -1074,6 +1077,8 @@ class GrpcCodeGenerator : public CodeGenerator {
           break;
         case ImportStyle::WEAPP:
           break;
+        case ImportStyle::MINIPROGRAM:
+          break;
       }
     }
     printer.Print("\n");
@@ -1095,6 +1100,7 @@ class GrpcCodeGenerator : public CodeGenerator {
         break;
       case ImportStyle::TYPESCRIPT:
         break;
+      case ImportStyle::MINIPROGRAM:
       case ImportStyle::WEAPP:
         printer.Print(vars, "const grpc = {};\n");
         printer.Print(vars, "grpc.web = require('grpc-web');\n\n");
@@ -1118,7 +1124,9 @@ class GrpcCodeGenerator : public CodeGenerator {
         vars["method_name"] = method->name();
         vars["in"] = method->input_type()->full_name();
         vars["out"] = method->output_type()->full_name();
-        if ((import_style == ImportStyle::COMMONJS || import_style == ImportStyle::WEAPP) &&
+        if ((import_style == ImportStyle::COMMONJS ||
+            import_style == ImportStyle::WEAPP ||
+            import_style == ImportStyle::MINIPROGRAM) &&
             method->output_type()->file() != file) {
           // Cross-file ref in CommonJS needs to use the module alias instead
           // of the global name.
@@ -1157,6 +1165,7 @@ class GrpcCodeGenerator : public CodeGenerator {
         break;
       case ImportStyle::TYPESCRIPT:
         break;
+      case ImportStyle::MINIPROGRAM:
       case ImportStyle::WEAPP:
         if (!vars["package"].empty()) {
           printer.Print(vars, "export default global.proto.$package$;\n\n");
