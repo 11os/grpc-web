@@ -8,10 +8,12 @@ goog.module('grpc.web.Exports');
 
 const AbstractClientBase = goog.require('grpc.web.AbstractClientBase');
 const GrpcWebClientBase = goog.require('grpc.web.GrpcWebClientBase');
+const GrpcMpClientBase = goog.require('grpc.web.GrpcMpClientBase');
 const StatusCode = goog.require('grpc.web.StatusCode');
 
 const exports = module['exports'];
 
 exports['AbstractClientBase'] = {'MethodInfo': AbstractClientBase.MethodInfo};
 exports['GrpcWebClientBase'] = GrpcWebClientBase;
+exports['GrpcMpClientBase'] = GrpcMpClientBase;
 exports['StatusCode'] = StatusCode;

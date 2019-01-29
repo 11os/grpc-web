@@ -1,5 +1,5 @@
 {
-  "name": "grpc-web",
+  "name": "grpc-mp",
   "version": "1.0.3",
   "author": "Google Inc.",
   "description": "gRPC-Web Client Runtime Library",
