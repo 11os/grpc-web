@@ -54,8 +54,7 @@ enum ImportStyle {
   CLOSURE = 0,     // goog.require("grpc.web.*")
   COMMONJS = 1,    // const grpcWeb = require("grpc-web")
   TYPESCRIPT = 2,  // import * as grpcWeb from 'grpc-web'
-  WEAPP = 3,  // for wechat miniprogram
-  MINIPROGRAM = 4, // for miniprogram
+  MINIPROGRAM = 3, // for miniprogram
 };
 
 string GetModeVar(const Mode mode) {
@@ -748,7 +747,8 @@ void PrintFileHeader(Printer* printer, const std::map<string, string>& vars) {
 }
 
 void PrintServiceConstructor(Printer* printer,
-                             std::map<string, string> vars) {
+                             std::map<string, string> vars,
+                             ImportStyle import_style) {
   printer->Print(
       vars,
       "/**\n"
@@ -767,7 +767,29 @@ void PrintServiceConstructor(Printer* printer,
         vars,
         "  options['format'] = '$format$';\n\n");
   }
-  printer->Print(
+  if (import_style == ImportStyle::MINIPROGRAM) {
+    printer->Print(
+      vars,
+      "  /**\n"
+      "   * @private @const {!grpc.web.$mode$ClientBase} The client\n"
+      "   */\n"
+      "  this.client_ = new grpc.web.GrpcMpClientBase(options);\n\n"
+      "  /**\n"
+      "   * @private @const {string} The hostname\n"
+      "   */\n"
+      "  this.hostname_ = hostname;\n\n"
+      "  /**\n"
+      "   * @private @const {?Object} The credentials to be used to connect\n"
+      "   *    to the server\n"
+      "   */\n"
+      "  this.credentials_ = credentials;\n\n"
+      "  /**\n"
+      "   * @private @const {?Object} Options for the client\n"
+      "   */\n"
+      "  this.options_ = options;\n"
+      "};\n\n\n");
+  } else {
+    printer->Print(
       vars,
       "  /**\n"
       "   * @private @const {!grpc.web.$mode$ClientBase} The client\n"
@@ -787,6 +809,7 @@ void PrintServiceConstructor(Printer* printer,
       "   */\n"
       "  this.options_ = options;\n"
       "};\n\n\n");
+  }
 }
 
 void PrintPromiseServiceConstructor(Printer* printer,
@@ -1027,8 +1050,6 @@ class GrpcCodeGenerator : public CodeGenerator {
       import_style = ImportStyle::TYPESCRIPT;
       file_name =
           UppercaseFirstLetter(StripProto(file->name())) + "ServiceClientPb.ts";
-    } else if (import_style_str == "weapp") {
-      import_style = ImportStyle::WEAPP;
     } else if (import_style_str == "miniprogram") {
       import_style = ImportStyle::MINIPROGRAM;
     } else {
@@ -1075,8 +1096,6 @@ class GrpcCodeGenerator : public CodeGenerator {
           break;
         case ImportStyle::TYPESCRIPT:
           break;
-        case ImportStyle::WEAPP:
-          break;
         case ImportStyle::MINIPROGRAM:
           break;
       }
@@ -1101,9 +1120,8 @@ class GrpcCodeGenerator : public CodeGenerator {
       case ImportStyle::TYPESCRIPT:
         break;
       case ImportStyle::MINIPROGRAM:
-      case ImportStyle::WEAPP:
         printer.Print(vars, "const grpc = {};\n");
-        printer.Print(vars, "grpc.web = require('grpc-web');\n\n");
+        printer.Print(vars, "grpc.web = require('grpc-mp');\n\n");
         PrintCommonJsMessagesDeps(&printer, file);
         break;
     }
@@ -1113,7 +1131,7 @@ class GrpcCodeGenerator : public CodeGenerator {
          ++service_index) {
       const ServiceDescriptor* service = file->service(service_index);
       vars["service_name"] = service->name();
-      PrintServiceConstructor(&printer, vars);
+      PrintServiceConstructor(&printer, vars, import_style);
       PrintPromiseServiceConstructor(&printer, vars);
 
       for (int method_index = 0;
@@ -1125,7 +1143,6 @@ class GrpcCodeGenerator : public CodeGenerator {
         vars["in"] = method->input_type()->full_name();
         vars["out"] = method->output_type()->full_name();
         if ((import_style == ImportStyle::COMMONJS ||
-            import_style == ImportStyle::WEAPP ||
             import_style == ImportStyle::MINIPROGRAM) &&
             method->output_type()->file() != file) {
           // Cross-file ref in CommonJS needs to use the module alias instead
@@ -1166,9 +1183,8 @@ class GrpcCodeGenerator : public CodeGenerator {
       case ImportStyle::TYPESCRIPT:
         break;
       case ImportStyle::MINIPROGRAM:
-      case ImportStyle::WEAPP:
         if (!vars["package"].empty()) {
-          printer.Print(vars, "export default global.proto.$package$;\n\n");
+          printer.Print(vars, "export default proto.$package$;\n\n");
         } else {
           printer.Print(vars, "export default global;\n\n");
         }
