@@ -53,34 +53,45 @@ const GrpcMpClientBase = function(opt_options) {
 
 GrpcMpClientBase.prototype.parser_ = new GrpcWebStreamParser();
 
+/**
+ * @override
+ * @export
+ */
 GrpcMpClientBase.prototype.rpcCall = function(method, request, metadata, methodInfo, callback) {
-  let data = [].slice.call(this.encodeRequest(request.serializeBinary()));
+  let data = [].slice.call(this.encodeRequest(methodInfo.requestSerializeFn(request)));
   let contentType = this.format_ == 'text' ? 'application/grpc-web-text': 'application/grpc-web+proto';
   let requestData = this.format_ == 'text' ? googCrypt.encodeByteArray(data) : data.map(item => String.fromCharCode(item)).join('');
   let dataType = this.format_ == 'text' ? 'text' : 'arraybuffer';
-  this.request_.request({
-    method: 'POST',
-    header: {
-      accept: contentType,
+  this.request_({
+    'method': 'POST',
+    'header': {
+      'accept': contentType,
       'content-type': contentType,
       'X-Grpc-Web': '1',
       'X-User-Agent': 'grpc-web-javascript/0.1'
     },
-    dataType: dataType,
-    responseType: dataType,
-    data: requestData,
-    url: method,
-    success: res => {
+    'dataType': dataType,
+    'responseType': dataType,
+    'data': requestData,
+    'url': method,
+    'success': res => {
       this.decodeResponse(res, methodInfo.responseDeserializeFn, callback);
     },
-    fail: res => {
-      callback({ message: res.errMsg }, null);
+    'fail': res => {
+      callback({ message: res['errMsg'] }, null);
     }
   });
 };
 
 GrpcMpClientBase.prototype.serverStreaming = function(method, request, metadata, methodInfo) {}
 
+/**
+ * Encode the grpc-web request
+ *
+ * @private
+ * @param {!Uint8Array} serialized The serialized proto payload
+ * @return {!Uint8Array} The application/grpc-web padded request
+ */
 GrpcMpClientBase.prototype.encodeRequest_ = function(serialized) {
   var len = serialized.length;
   var bytesArray = [0, 0, 0, 0];
@@ -123,8 +134,8 @@ GrpcMpClientBase.prototype.decodeResponse = function(res, responseDeserializeFn_
   let { data, statusCode, header } = res;
   const GRPC_STATUS = 'grpc-status';
   const GRPC_STATUS_MESSAGE = 'grpc-message';
-  var grpcStatusCode = header[GRPC_STATUS];
-  var grpcStatusMessage = header[GRPC_STATUS_MESSAGE];
+  var grpcStatusCode = res['header'][GRPC_STATUS];
+  var grpcStatusMessage = res['header'][GRPC_STATUS_MESSAGE];
   if (grpcStatusCode && grpcStatusMessage) callback({code: Number(grpcStatusCode), message: grpcStatusMessage}, null);
   
   const contentType = 'application/grpc-web-text';
