@@ -19,7 +19,8 @@
     "build": "node scripts/build.js",
     "prepare": "npm run build && require-self",
     "prepublishOnly": "npm run build",
-    "test": "mocha --timeout 8000 \"./test/**/*_test.js\""
+    "test": "mocha --timeout 8000 \"./test/**/*_test.js\"",
+    "dist": "npm run build && cp ./index.js ../../../grpc-mp/index.js"
   },
   "license": "Apache-2.0",
   "devDependencies": {
